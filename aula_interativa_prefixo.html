@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aula Interativa de Inglês: Notícias e Vestibular</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - Report Info: List of reading strategies. Goal: Inform, Organize. Viz/Method: HTML text sections with Tailwind styling. Interaction: Simple navigation. Justification: Clear presentation of textual information.
+        - Report Info: Tables of prefixes/suffixes with meanings, examples, sentences. Goal: Inform, Explore. Viz/Method: Interactive HTML tables. Interaction: Click to see example sentence and "other words". Justification: Makes dense tables more engaging and digestible.
+        - Report Info: Dynamic vocabulary expansion for prefixes/suffixes. Goal: Expand Vocabulary, Engage. Viz/Method: Gemini API call to generate new words, displayed in a dedicated section. Interaction: Button click to trigger generation. Justification: Provides on-demand, personalized vocabulary practice. Library: Gemini API.
+        - Report Info: News article summarization. Goal: Comprehension, Efficiency. Viz/Method: Gemini API call to summarize text, displayed in a dedicated section. Interaction: Button click to trigger summarization. Justification: Helps students quickly grasp main points of articles. Library: Gemini API.
+        - Report Info: Data on CO2 emissions, pollution deaths from environmental news. Goal: Visualize Impact, Inform. Viz/Method: Chart.js Bar Chart with enhanced aesthetics (gradients, improved tooltips, animations). Interaction: Static chart, tooltips on hover. Justification: Provides a more visually appealing and impactful summary of key data points mentioned in the text. Library: Chart.js.
+        - Report Info: Vestibular exercises. Goal: Assess, Practice. Viz/Method: HTML forms (radio for MCQs, input for fill-in-the-blanks). Interaction: Click to submit, JS for feedback and showing explanations. Justification: Simulates exam practice.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-button.active {
+            border-bottom-width: 4px;
+            border-color: #0D9488; /* teal-600 */
+            color: #0D9488;
+            font-weight: 600;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .highlight-word {
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-color: #F59E0B; /* amber-500 */
+            text-decoration-thickness: 2px;
+        }
+        .word-popup {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #E5E7EB; /* gray-200 */
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 10;
+            width: auto; /* Adjust as needed, or set a max-width */
+            max-width: 300px; /* Example max-width */
+            font-size: 0.875rem; /* text-sm */
+        }
+        .vocab-table td, .vocab-table th {
+            border: 1px solid #E5E7EB;
+            padding: 8px;
+            text-align: left;
+        }
+        .vocab-table th {
+            background-color: #F3F4F6; /* gray-100 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Tailwind max-w-2xl */
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px; /* Tailwind h-80, can be responsive sm:h-80 md:h-96 */
+            max-height: 400px; /* Example max height */
+        }
+         @media (min-width: 768px) {
+            .chart-container {
+                height: 384px; /* Tailwind h-96 */
+            }
+        }
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #0D9488;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-amber-50 text-stone-800">
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-teal-700">Aula Interativa de Inglês</h1>
+            <p class="text-xl text-stone-600 mt-2">Notícias, Vocabulário e Preparação para o Vestibular</p>
+        </header>
+
+        <nav class="mb-8 overflow-x-auto">
+            <ul class="flex border-b-2 border-stone-200 space-x-2 sm:space-x-4 whitespace-nowrap">
+                <li><button class="tab-button py-3 px-2 sm:px-4 text-stone-600 hover:text-teal-600 active" data-tab="introducao">Introdução</button></li>
+                <li><button class="tab-button py-3 px-2 sm:px-4 text-stone-600 hover:text-teal-600" data-tab="leitura">Estratégias de Leitura</button></li>
+                <li><button class="tab-button py-3 px-2 sm:px-4 text-stone-600 hover:text-teal-600" data-tab="vocabulario">Vocabulário</button></li>
+                <li><button class="tab-button py-3 px-2 sm:px-4 text-stone-600 hover:text-teal-600" data-tab="modulo1">Módulo 1: Tecnologia</button></li>
+                <li><button class="tab-button py-3 px-2 sm:px-4 text-stone-600 hover:text-teal-600" data-tab="modulo2">Módulo 2: Meio Ambiente</button></li>
+                <li><button class="tab-button py-3 px-2 sm:px-4 text-stone-600 hover:text-teal-600" data-tab="recursos">Recursos Adicionais</button></li>
+            </ul>
+        </nav>
+
+        <main>
+            <section id="introducao" class="content-section active bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-teal-700 mb-4">Bem-vindo à Aula de Inglês Dinâmica!</h2>
+                <p class="mb-3">Esta aula foi desenvolvida para aprimorar suas habilidades em inglês de uma forma prática e conectada com o mundo real. Vamos explorar como a tecnologia está mudando a educação, a importância de materiais autênticos como notícias, e como dominar o vocabulário pode abrir portas para o seu sucesso acadêmico e no vestibular.</p>
+                <p class="mb-3">A educação moderna da língua inglesa prioriza habilidades práticas e pensamento crítico. Ao invés de apenas memorizar regras, você aprenderá a aplicar o inglês para entender e discutir eventos atuais, analisar informações e se preparar para os desafios da economia digital.</p>
+                <p>Artigos de notícias são ferramentas valiosas porque nos expõem ao uso natural da língua, com vocabulário diversificado e contextos culturais reais. Isso torna o aprendizado mais relevante e envolvente, ajudando a desenvolver não apenas a competência linguística, mas também a consciência global e a capacidade de pensar criticamente.</p>
+            </section>
+
+            <section id="leitura" class="content-section bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-teal-700 mb-4">Aproveitando Artigos de Notícias</h2>
+                <p class="mb-4">Ler notícias em inglês é uma ótima maneira de melhorar sua compreensão. Para isso, vamos explorar algumas estratégias eficazes que ajudarão você a navegar por textos autênticos, mesmo que encontre palavras desconhecidas.</p>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-teal-600 mb-2">Selecionando Notícias</h3>
+                    <p class="mb-2">Escolha tópicos que te interessem! Eventos atuais, tecnologia, meio ambiente, cultura, esportes... quanto mais relevante o assunto, mais motivador será o aprendizado. Existem plataformas como "Practice English with News", "News in Levels" e "Easy English NEWS" que adaptam notícias para estudantes de inglês. Grandes portais como BBC News e Science Daily também são boas fontes.</p>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-teal-600 mb-2">Estratégias de Leitura Essenciais</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="text-lg font-medium text-stone-700">Skimming (Leitura Superficial)</h4>
+                            <p class="text-stone-600">Leia rapidamente para ter uma ideia geral do texto. Foque em títulos, subtítulos e nos primeiros e últimos parágrafos. O objetivo é identificar o tema principal.</p>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-medium text-stone-700">Scanning (Leitura Seletiva)</h4>
+                            <p class="text-stone-600">Busque informações específicas como datas, nomes, números ou palavras-chave. Mova os olhos rapidamente pelo texto até encontrar o que procura.</p>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-medium text-stone-700">Pistas Tipográficas</h4>
+                            <p class="text-stone-600">Preste atenção em títulos, negrito, itálico e listas. Esses elementos visuais destacam informações importantes e ajudam a entender a organização do conteúdo.</p>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-medium text-stone-700">Compreensão Geral (Inferência e Contexto)</h4>
+                            <p class="text-stone-600">Tente entender o significado global do texto, mesmo que não conheça todas as palavras. Use o contexto para inferir o significado de termos desconhecidos.</p>
+                        </div>
+                    </div>
+                </div>
+                 <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-teal-600 mb-2">Abordagens Pedagógicas</h3>
+                    <ul class="list-disc list-inside space-y-2 text-stone-600">
+                        <li><strong>Pré-leitura:</strong> Antes de ler, ative seu conhecimento prévio. O que você já sabe sobre o tópico? Faça previsões com base no título.</li>
+                        <li><strong>Durante a leitura:</strong> Aplique skimming e scanning. Tente inferir o significado de palavras novas pelo contexto.</li>
+                        <li><strong>Pós-leitura:</strong> Resuma as ideias principais. Discuta o conteúdo, conectando-o com sua vida ou outros contextos. Analise o viés da fonte e as implicações da notícia.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="vocabulario" class="content-section bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-teal-700 mb-4">Dominando o Vocabulário: Prefixos e Sufixos</h2>
+                <p class="mb-4">Para desvendar o significado das palavras em inglês e expandir seu vocabulário, é crucial entender a "engenharia" por trás delas. Prefixos e sufixos são como peças de Lego que se encaixam nas palavras-raiz, mudando seu sentido ou sua função na frase. Vamos explorar cada um deles com mais detalhes, buscando a lógica por trás de seus significados.</p>
+
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-teal-600 mb-2">Prefixos: A Essência Antes da Raiz</h3>
+                    <p class="mb-3">Os prefixos são pequenas adições que vêm no **início** de uma palavra, funcionando como um 'modificador' de sentido. Eles podem indicar negação, repetição, posição, e muito mais.</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full vocab-table">
+                            <thead>
+                                <tr>
+                                    <th>Prefixo</th>
+                                    <th>Significado em Português</th>
+                                    <th>Exemplo em Inglês</th>
+                                    <th>Significado do Exemplo</th>
+                                    <th>Exemplo de Frase em Inglês</th>
+                                    <th>Significado da Frase</th>
+                                    <th>Outras Palavras</th>
+                                </tr>
+                            </thead>
+                            <tbody id="prefixTableBody">
+                                </tbody>
+                        </table>
+                    </div>
+                    <button id="generateMorePrefixWords" class="mt-4 bg-amber-600 text-white py-2 px-4 rounded-md hover:bg-amber-700">Gerar Mais Palavras ✨ (Prefixos)</button>
+                    <div id="generatedPrefixWords" class="mt-4 p-4 bg-amber-50 rounded-lg shadow-inner" style="display: none;">
+                        <p class="font-semibold text-stone-700 mb-2">Palavras Geradas:</p>
+                        <div id="generatedPrefixWordsContent" class="text-sm"></div>
+                        <div id="prefixLoading" class="loading-spinner" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold text-teal-600 mb-2">Sufixos: A Função e a Natureza da Palavra</h3>
+                    <p class="mb-3">Sufixos são pequenas adições que vêm no **final** de uma palavra. Eles são poderosos porque podem mudar a **classe gramatical** da palavra (transformar um verbo em substantivo, por exemplo) ou adicionar uma característica específica.</p>
+                     <div class="overflow-x-auto">
+                        <table class="w-full vocab-table">
+                            <thead>
+                                <tr>
+                                    <th>Sufixo</th>
+                                    <th>Significado em Português</th>
+                                    <th>Exemplo em Inglês</th>
+                                    <th>Significado do Exemplo</th>
+                                    <th>Exemplo de Frase em Inglês</th>
+                                    <th>Significado da Frase</th>
+                                    <th>Outras Palavras</th>
+                                </tr>
+                            </thead>
+                            <tbody id="suffixTableBody">
+                                </tbody>
+                        </table>
+                    </div>
+                    <button id="generateMoreSuffixWords" class="mt-4 bg-amber-600 text-white py-2 px-4 rounded-md hover:bg-amber-700">Gerar Mais Palavras ✨ (Sufixos)</button>
+                    <div id="generatedSuffixWords" class="mt-4 p-4 bg-amber-50 rounded-lg shadow-inner" style="display: none;">
+                        <p class="font-semibold text-stone-700 mb-2">Palavras Geradas:</p>
+                        <div id="generatedSuffixWordsContent" class="text-sm"></div>
+                        <div id="suffixLoading" class="loading-spinner" style="display: none;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="modulo1" class="content-section bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-teal-700 mb-4">Módulo 1: Tecnologia e Educação no Século XXI</h2>
+                <p class="mb-4">Este módulo explora como a tecnologia, especialmente IA, programação e cibersegurança, está se tornando crucial na educação. Vamos analisar um artigo de notícia sobre este tema e praticar a identificação de prefixos e sufixos, além de resolver exercícios no estilo vestibular.</p>
+                
+                <div class="bg-amber-50 p-4 rounded-md mb-6">
+                    <h3 class="text-xl font-semibold text-teal-600 mb-2">Texto de Notícia: AI, Programming, and Cybersecurity in High School</h3>
+                    <p class="text-sm text-stone-600 mb-2">Fonte: Brazilian Senate News (adaptado)</p>
+                    <div id="newsTextModule1" class="prose max-w-none text-stone-700">
+                        <p>This article from the Brazilian Senate News discusses a new proposed law, <strong>PL 2.051/2025</strong>, by Senator Marcos do Val, which aims to make <span class="highlight-word" data-analysis='{"root":"Artificial Intelligence", "affixes":[]}'>Artificial Intelligence</span> (AI), <span class="highlight-word" data-analysis='{"root":"program", "affixes":["-ming (suffix, gerund/noun)"]}'>programming</span>, and <span class="highlight-word" data-analysis='{"root":"security", "affixes":["cyber- (prefix, related to computers)", "-ity (suffix, forms noun)"]}'>cybersecurity</span> <span class="highlight-word" data-analysis='{"root":"mandate", "affixes":["-ory (suffix, forms adjective)"]}'>mandatory</span> subjects in high school. The main goal of this project is to prepare young people for the challenges and <span class="highlight-word" data-analysis='{"root":"opportun(e)", "affixes":["-ities (suffix, forms plural noun)"]}'>opportunities</span> that come with the growing digital economy.</p>
+                        <p>The proposal suggests changing the National Education Guidelines and Bases Law to include these <span class="highlight-word" data-analysis='{"root":"technology", "affixes":["-logical (suffix, forms adjective)"]}'>technological</span> subjects. The article emphasizes that technological <span class="highlight-word" data-analysis='{"root":"educate", "affixes":["-ion (suffix, forms noun)"]}'>education</span> is a key driver for economic <span class="highlight-word" data-analysis='{"root":"develop", "affixes":["-ment (suffix, forms noun)"]}'>development</span>, directly impacting <span class="highlight-word" data-analysis='{"root":"product", "affixes":["-ivity (suffix, forms noun)"]}'>productivity</span>, creating skilled jobs, and <span class="highlight-word" data-analysis='{"root":"strength", "affixes":["-en (suffix, forms verb)", "-ing (suffix, gerund/noun)"]}'>strengthening</span> <span class="highlight-word" data-analysis='{"root":"innovate", "affixes":["-ion (suffix, forms noun)"]}'>innovation</span>.</p>
+                        <p>As an example, the proposal points to a recent initiative in China, where schools in Beijing now dedicate at least eight hours annually to AI education, as reported by Bloomberg. Senator Marcos do Val believes that by <span class="highlight-word" data-analysis='{"root":"implement", "affixes":["-ing (suffix, gerund)"]}'>implementing</span> these disciplines in Brazilian schools, the country will equip its youth with critical skills for the 21st century, boosting <span class="highlight-word" data-analysis='{"root":"entrepreneur", "affixes":["-ship (suffix, forms noun)"]}'>entrepreneurship</span> and <span class="highlight-word" data-analysis='{"root":"nation", "affixes":["inter- (prefix, between)", "-al (suffix, forms adjective)"]}'>international</span> <span class="highlight-word" data-analysis='{"root":"compete", "affixes":["-itive (suffix, forms adjective)", "-ness (suffix, forms noun)"]}'>competitiveness</span>. He also highlights that this initiative will provide a strong foundation for <span class="highlight-word" data-analysis='{"root":"sustain", "affixes":["-able (suffix, forms adjective)"]}'>sustainable</span> development and social <span class="highlight-word" data-analysis='{"root":"include", "affixes":["in- (prefix, in/into)", "-sion (suffix, forms noun)"]}'>inclusion</span>, ensuring that the benefits of digital <span class="highlight-word" data-analysis='{"root":"form", "affixes":["trans- (prefix, across)", "-ation (suffix, forms noun)"]}'>transformation</span> are widely <span class="highlight-word" data-analysis='{"root":"distribute", "affixes":["-d (suffix, past participle)"]}'>distributed</span>.</p>
+                        <p>The senator further explains that these subjects are crucial not only for the <span class="highlight-word" data-analysis='{"root":"inform", "affixes":["in- (prefix, in/into)", "-ation (suffix, forms noun)"]}'>information</span> technology sector but also for innovation and security in other fields like agriculture, healthcare, and financial services. He states that "programming has become the fundamental language of the digital economy, AI <span class="highlight-word" data-analysis='{"root":"define", "affixes":["re- (prefix, again)"]}'>redefines</span> productive processes and creates new opportunities, while cybersecurity ensures the stability and confidence <span class="highlight-word" data-analysis='{"root":"necess(ity)", "affixes":["-ary (suffix, forms adjective)"]}'>necessary</span> for all digital <span class="highlight-word" data-analysis='{"root":"act", "affixes":["trans- (prefix, across)", "-ions (suffix, forms plural noun)"]}'>transactions</span> and operations."</p>
+                        <p>Currently, the project has not yet been sent to the Senate's thematic commissions for further <span class="highlight-word" data-analysis='{"root":"discuss", "affixes":["-ion (suffix, forms noun)"]}'>discussion</span>.</p>
+                    </div>
+                </div>
+                <button id="summarizeModule1News" class="mt-4 bg-teal-600 text-white py-2 px-4 rounded-md hover:bg-teal-700">Resumir Notícia ✨</button>
+                <div id="summaryModule1" class="mt-4 p-4 bg-blue-50 rounded-lg shadow-inner" style="display: none;">
+                    <p class="font-semibold text-stone-700 mb-2">Resumo da Notícia:</p>
+                    <div id="summaryModule1Content" class="text-sm"></div>
+                    <div id="summaryModule1Loading" class="loading-spinner" style="display: none;"></div>
+                </div>
+                <div id="wordPopup" class="word-popup" style="display: none;"></div>
+
+                <h3 class="text-xl font-semibold text-teal-600 mb-3 mt-6">Exercícios de Vestibular (Módulo 1)</h3>
+                <div id="quizModule1">
+                    </div>
+            </section>
+
+            <section id="modulo2" class="content-section bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-teal-700 mb-4">Módulo 2: Desafios Ambientais Globais</h2>
+                <p class="mb-4">Este módulo foca em questões ambientais urgentes, utilizando um artigo da Iberdrola que resume os problemas identificados pela ONU. Continuaremos a prática de análise de palavras e resolveremos mais exercícios estilo vestibular.</p>
+
+                <div class="bg-amber-50 p-4 rounded-md mb-6">
+                    <h3 class="text-xl font-semibold text-teal-600 mb-2">Texto de Notícia: The 10 Most Important Environmental Problems</h3>
+                    <p class="text-sm text-stone-600 mb-2">Fonte: Iberdrola (adaptado)</p>
+                    <div id="newsTextModule2" class="prose max-w-none text-stone-700">
+                         <p>This article from Iberdrola discusses the ten most <span class="highlight-word" data-analysis='{"root":"import", "affixes":["-ant (suffix, forms adjective)"]}'>important</span> <span class="highlight-word" data-analysis='{"root":"environment", "affixes":["-al (suffix, forms adjective)"]}'>environmental</span> problems facing our planet that need to be <span class="highlight-word" data-analysis='{"root":"address", "affixes":["-ed (suffix, past participle)"]}'>addressed</span> by 2030, according to the United Nations (UN). It emphasizes that the next decade is <span class="highlight-word" data-analysis='{"root":"crux", "affixes":["-ial (suffix, forms adjective)"]}'>crucial</span> for <span class="highlight-word" data-analysis='{"root":"solve", "affixes":["-ing (suffix, gerund/present participle)"]}'>solving</span> these <span class="highlight-word" data-analysis='{"root":"globe", "affixes":["-al (suffix, forms adjective)"]}'>global</span> issues.</p>
+                        <p><strong>Climate Change <span class="highlight-word" data-analysis='{"root":"adapt", "affixes":["-ation (suffix, forms noun)"]}'>Adaptation</span> and <span class="highlight-word" data-analysis='{"root":"mitigate", "affixes":["-ion (suffix, forms noun)"]}'>Mitigation</span></strong>: Global warming, caused by a 50% increase in CO2 <span class="highlight-word" data-analysis='{"root":"emit", "affixes":["e- (prefix, out)", "-ssions (suffix, forms plural noun)"]}'>emissions</span> since 1990, is <span class="highlight-word" data-analysis='{"root":"accelerate", "affixes":["ac- (prefix, to/towards)", "-ing (suffix, present participle)"]}'>accelerating</span> climate change. This leads to more frequent and extreme weather events, <span class="highlight-word" data-analysis='{"root":"threat", "affixes":["-ening (suffix, present participle)"]}'>threatening</span> millions. We need actions to lessen these effects and adapt to the <span class="highlight-word" data-analysis='{"root":"sequence", "affixes":["con- (prefix, with/together)", "-s (suffix, plural noun)"]}'>consequences</span>.</p>
+                        <p><strong><span class="highlight-word" data-analysis='{"root":"Pollute", "affixes":["-ion (suffix, forms noun)"]}'>Pollution</span> Problems and Health Impact</strong>: 90% of humanity breathes <span class="highlight-word" data-analysis='{"root":"pollute", "affixes":["-ed (suffix, past participle/adjective)"]}'>polluted</span> air, causing 7 million deaths annually from <span class="highlight-word" data-analysis='{"root":"respire", "affixes":["-atory (suffix, forms adjective)"]}'>respiratory</span> diseases. <span class="highlight-word" data-analysis='{"root":"Contaminate", "affixes":["con- (prefix, with/together)", "-ed (suffix, past participle/adjective)"]}'>Contaminated</span> water causes 5 million deaths yearly. The UN advocates for <span class="highlight-word" data-analysis='{"root":"eliminate", "affixes":["e- (prefix, out)", "-ing (suffix, present participle)"]}'>eliminating</span> waste discharges and <span class="highlight-word" data-analysis='{"root":"minimize", "affixes":["-ing (suffix, present participle)"]}'>minimizing</span> chemical use.</p>
+                        <p><strong>Ocean Protection</strong>: Oceans face plastic dumps, ecosystem <span class="highlight-word" data-analysis='{"root":"deteriorate", "affixes":["de- (prefix, down/away)", "-ion (suffix, forms noun)"]}'>deterioration</span>, and <span class="highlight-word" data-analysis='{"root":"pollute", "affixes":["-ing (suffix, present participle/adjective)"]}'>polluting</span> effluents. Better management of protected marine areas and reducing <span class="highlight-word" data-analysis='{"root":"fish", "affixes":["over- (prefix, too much)", "-ing (suffix, gerund/noun)"]}'>overfishing</span> are needed.</p>
+                        <p><strong>Energy Transition and <span class="highlight-word" data-analysis='{"root":"new", "affixes":["re- (prefix, again)", "-able (suffix, forms adjective)"]}'>Renewable</span> Energies</strong>: Energy accounts for 60% of global greenhouse gas emissions. A shift to a cleaner, more <span class="highlight-word" data-analysis='{"root":"access", "affixes":["-ible (suffix, forms adjective)"]}'>accessible</span>, and <span class="highlight-word" data-analysis='{"root":"effic(acy)", "affixes":["-ient (suffix, forms adjective)"]}'>efficient</span> energy model based on renewable sources is necessary for <span class="highlight-word" data-analysis='{"root":"sustain", "affixes":["-able (suffix, forms adjective)"]}'>sustainable</span> communities.</p>
+                        <p><strong><span class="highlight-word" data-analysis='{"root":"Sustain", "affixes":["-able (suffix, forms adjective)"]}'>Sustainable</span> Food Model</strong>: <span class="highlight-word" data-analysis='{"root":"intense", "affixes":["-ive (suffix, forms adjective)"]}'>Intensive</span> food <span class="highlight-word" data-analysis='{"root":"produce", "affixes":["-tion (suffix, forms noun)"]}'>production</span> harms the environment by <span class="highlight-word" data-analysis='{"root":"deplete", "affixes":["de- (prefix, down/away)", "-ing (suffix, present participle)"]}'>depleting</span> soil. <span class="highlight-word" data-analysis='{"root":"exploit", "affixes":["over- (prefix, too much)", "-ation (suffix, forms noun)"]}'>Over-exploitation</span> of natural resources also <span class="highlight-word" data-analysis='{"root":"jeopardy", "affixes":["-izes (suffix, forms verb)"]}'>jeopardizes</span> food security.</p>
+                        <p><strong><span class="highlight-word" data-analysis='{"root":"diverse", "affixes":["bio- (prefix, life)", "-ity (suffix, forms noun)"]}'>Biodiversity</span> Protection</strong>: 8% of known animal species have <span class="highlight-word" data-analysis='{"root":"appear", "affixes":["dis- (prefix, not/opposite)", "-ed (suffix, past participle)"]}'>disappeared</span>, and 22% are <span class="highlight-word" data-analysis='{"root":"danger", "affixes":["en- (prefix, cause to be)", "-ed (suffix, past participle/adjective)"]}'>endangered</span>, mainly due to habitat <span class="highlight-word" data-analysis='{"root":"destruct", "affixes":["de- (prefix, down/away)", "-ion (suffix, forms noun)"]}'>destruction</span>.</p>
+                        <p><strong><span class="highlight-word" data-analysis='{"root":"urb", "affixes":["-an (suffix, forms adjective)"]}'>Urban</span> <span class="highlight-word" data-analysis='{"root":"develop", "affixes":["de- (prefix, down/away)", "-ment (suffix, forms noun)"]}'>Development</span> and Sustainable Mobility</strong>: Future cities need to be compact, safe, <span class="highlight-word" data-analysis='{"root":"include", "affixes":["in- (prefix, in/into)", "-ive (suffix, forms adjective)"]}'>inclusive</span>, <span class="highlight-word" data-analysis='{"root":"ecology", "affixes":["-ical (suffix, forms adjective)"]}'>ecological</span>, and energy-efficient, with sustainable <span class="highlight-word" data-analysis='{"root":"port", "affixes":["trans- (prefix, across)", "-ation (suffix, forms noun)"]}'>transportation</span> that <span class="highlight-word" data-analysis='{"root":"priority", "affixes":["-izes (suffix, forms verb)"]}'>prioritizes</span> pedestrians.</p>
+                        <p><strong>Water Stress and <span class="highlight-word" data-analysis='{"root":"scarce", "affixes":["-ity (suffix, forms noun)"]}'>Scarcity</span></strong>: Over 40% of the global population is affected by water scarcity. <span class="highlight-word" data-analysis='{"root":"Response", "affixes":["-ible (suffix, forms adjective)"]}'>Responsible</span> water use is vital.</p>
+                        <p><strong><span class="highlight-word" data-analysis='{"root":"treme (related to tremor/boundary)", "affixes":["ex- (prefix, out/beyond)"]}'>Extreme</span> Weather Phenomena</strong>: Rising global temperatures cause more frequent, intense, and <span class="highlight-word" data-analysis='{"root":"devastate", "affixes":["de- (prefix, down/away)", "-ing (suffix, present participle/adjective)"]}'>devastating</span> weather events.</p>
+                        <p><strong><span class="highlight-word" data-analysis='{"root":"populate", "affixes":["over- (prefix, too much)", "-ion (suffix, forms noun)"]}'>Overpopulation</span> and Waste Management</strong>: The world population will reach 8.5 billion by 2030, requiring significant waste <span class="highlight-word" data-analysis='{"root":"reduce", "affixes":["re- (prefix, again/back)", "-tion (suffix, forms noun)"]}'>reduction</span> through <span class="highlight-word" data-analysis='{"root":"prevent", "affixes":["pre- (prefix, before)", "-ion (suffix, forms noun)"]}'>prevention</span>, <span class="highlight-word" data-analysis='{"root":"cycle", "affixes":["re- (prefix, again)", "-ing (suffix, gerund/noun)"]}'>recycling</span>, and <span class="highlight-word" data-analysis='{"root":"use", "affixes":["re- (prefix, again)"]}'>reuse</span>, aligning with a <span class="highlight-word" data-analysis='{"root":"circle", "affixes":["-ar (suffix, forms adjective)"]}'>circular</span> economy.</p>
+                    </div>
+                </div>
+                <button id="summarizeModule2News" class="mt-4 bg-teal-600 text-white py-2 px-4 rounded-md hover:bg-teal-700">Resumir Notícia ✨</button>
+                <div id="summaryModule2" class="mt-4 p-4 bg-blue-50 rounded-lg shadow-inner" style="display: none;">
+                    <p class="font-semibold text-stone-700 mb-2">Resumo da Notícia:</p>
+                    <div id="summaryModule2Content" class="text-sm"></div>
+                    <div id="summaryModule2Loading" class="loading-spinner" style="display: none;"></div>
+                </div>
+                <div id="wordPopupModule2" class="word-popup" style="display: none;"></div>
+                
+                <div class="my-6">
+                    <h3 class="text-xl font-semibold text-teal-600 mb-3">Visualizando o Impacto</h3>
+                    <p class="mb-4">Os dados mencionados no artigo podem ser visualizados para melhor compreensão. Veja um exemplo abaixo sobre as mortes anuais relacionadas à poluição, conforme estimado pela OMS.</p>
+                    <div class="chart-container bg-white p-3 rounded-lg shadow">
+                        <canvas id="pollutionChart"></canvas>
+                    </div>
+                </div>
+
+
+                <h3 class="text-xl font-semibold text-teal-600 mb-3 mt-8">Exercícios de Vestibular (Módulo 2)</h3>
+                <div id="quizModule2">
+                    </div>
+            </section>
+
+            <section id="recursos" class="content-section bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-teal-700 mb-4">Recursos Adicionais e Dicas para o Sucesso</h2>
+                <p class="mb-4">Continue sua jornada de aprendizado com estas dicas e recursos:</p>
+                
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-teal-600 mb-2">Expansão Contínua do Vocabulário</h3>
+                    <ul class="list-disc list-inside space-y-2 text-stone-600">
+                        <li>Mantenha um caderno de vocabulário: anote novas palavras, suas formas e frases de exemplo.</li>
+                        <li>Use aplicativos de flashcards, como o Expemo.</li>
+                        <li>Leia muito em inglês: notícias, artigos, livros.</li>
+                        <li>Consuma mídias em inglês: filmes, séries, podcasts.</li>
+                    </ul>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-teal-600 mb-2">Dicas para Questões de Formação de Palavras em Exames</h3>
+                     <ul class="list-disc list-inside space-y-2 text-stone-600">
+                        <li>Leia a frase/texto completo para entender o contexto e a classe gramatical necessária.</li>
+                        <li>Identifique a palavra-base.</li>
+                        <li>Considere prefixos para alterar o significado (ex: negação com *un-*, *dis-*).</li>
+                        <li>Considere sufixos para mudar a classe gramatical (ex: *-tion* para substantivo, *-able* para adjetivo).</li>
+                        <li>Verifique a concordância gramatical (singular/plural, tempo verbal).</li>
+                        <li>Revise a ortografia.</li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-xl font-semibold text-teal-600 mb-2">Sugestões para Leitura Autônoma de Notícias</h3>
+                    <ul class="list-disc list-inside space-y-2 text-stone-600">
+                        <li><strong>Breaking News English:</strong> Artigos simplificados em vários níveis.</li>
+                        <li><strong>PBS Newshour Classroom:</strong> Notícias com recursos para estudantes.</li>
+                        <li><strong>Science News:</strong> Ótimo para artigos de ciência e tecnologia.</li>
+                        <li><strong>BBC News:</strong> Fonte geral para inglês autêntico.</li>
+                        <li><strong>Dogonews:</strong> Bom ponto de partida para leitores menos confiantes, auxiliando na construção de base.</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+
+        <footer class="text-center mt-12 py-6 border-t border-stone-200">
+            <p class="text-stone-600">&copy; <span id="currentYear"></span> Aula Interativa de Inglês. Preparando você para o futuro!</p>
+        </footer>
+    </div>
+
+    <script>
+        // Definição de dados e funções
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const contentSections = document.querySelectorAll('.content-section');
+        const currentYearSpan = document.getElementById('currentYear');
+        currentYearSpan.textContent = new Date().getFullYear();
+
+        const prefixData = [
+            { prefix: "un-", meaning: "Não, oposto de, remover", example: "unhappy", exampleMeaning: "infeliz", sentence: "She felt unhappy after hearing the bad news.", sentenceMeaning: "Ela se sentiu infeliz depois de ouvir as más notícias.", otherWords: "unbelievable, unfold, unnecessary, unaware" },
+            { prefix: "re-", meaning: "Novamente, de novo", example: "redo", exampleMeaning: "refazer", sentence: "The teacher asked me to redo the assignment.", sentenceMeaning: "O professor me pediu para refazer a tarefa.", otherWords: "rewrite, rebuild, reconsider, return" },
+            { prefix: "dis-", meaning: "Oposto de, remoção, separação", example: "dislike", exampleMeaning: "não gostar", sentence: "Many people dislike doing homework on weekends.", sentenceMeaning: "Muitas pessoas não gostam de fazer lição de casa nos fins de semana.", otherWords: "disagree, disconnect, disappear, disadvantage" },
+            { prefix: "pre-", meaning: "Antes, anterior", example: "preview", exampleMeaning: "prévia", sentence: "We watched a preview of the new movie.", sentenceMeaning: "Nós assistimos a uma prévia do novo filme.", otherWords: "prepaid, predict, precaution, preschool" },
+            { prefix: "over-", meaning: "Excesso, acima", example: "overwhelm", exampleMeaning: "sobrecarregar", sentence: "The amount of information can overwhelm students.", sentenceMeaning: "A quantidade de informação pode sobrecarregar os alunos.", otherWords: "overcome, overheat, overlook, overweight" },
+            { prefix: "under-", meaning: "Abaixo, insuficiência", example: "understand", exampleMeaning: "entender", sentence: "It's important to understand the instructions clearly.", sentenceMeaning: "É importante entender as instruções claramente.", otherWords: "underestimate, undergo, underline, underwater" },
+            { prefix: "in-/im-/il-/ir-", meaning: "Não, oposto de", example: "inactive, impossible, illegal, irregular", exampleMeaning: "inativo, impossível, ilegal, irregular", sentence: "The volcano has been inactive for centuries. It's impossible to finish this work in one hour. Parking here is illegal. His attendance was irregular.", sentenceMeaning: "O vulcão está inativo há séculos. É impossível terminar este trabalho em uma hora. Estacionar aqui é ilegal. A frequência dele era irregular.", otherWords: "incomplete, impatient, illogical, irresponsible" },
+            { prefix: "mis-", meaning: "Errado, incorreto", example: "misunderstand", exampleMeaning: "entender errado", sentence: "I think you misunderstood my intentions.", sentenceMeaning: "Acho que você entendeu errado minhas intenções.", otherWords: "misinterpret, mislead, misspell" },
+            { prefix: "non-", meaning: "Não", example: "non-profit", exampleMeaning: "sem fins lucrativos", sentence: "They work for a non-profit organization.", sentenceMeaning: "Eles trabalham para uma organização sem fins lucrativos.", otherWords: "non-existent, non-stop, non-fiction" },
+            { prefix: "anti-", meaning: "Contra", example: "antibiotic", exampleMeaning: "antibiótico", sentence: "The doctor prescribed an antibiotic for the infection.", sentenceMeaning: "O médico receitou um antibiótico para a infecção.", otherWords: "antifreeze, antisocial, antivirus" },
+            { prefix: "co-", meaning: "Com, junto", example: "cooperate", exampleMeaning: "cooperar", sentence: "We need to cooperate to solve this problem.", sentenceMeaning: "Precisamos cooperar para resolver este problema.", otherWords: "co-worker, co-exist, co-pilot" },
+            { prefix: "sub-", meaning: "Abaixo, menor", example: "subway", exampleMeaning: "metrô", sentence: "Let's take the subway to avoid traffic.", sentenceMeaning: "Vamos pegar o metrô para evitar o trânsito.", otherWords: "submarine, subzero, subdivide" },
+            { prefix: "inter-", meaning: "Entre, mútuo", example: "international", exampleMeaning: "internacional", sentence: "This is an international conference.", sentenceMeaning: "Esta é uma conferência internacional.", otherWords: "interact, interfere, interconnected" },
+            { prefix: "trans-", meaning: "Através, além", example: "transport", exampleMeaning: "transporte", sentence: "Public transport is essential in big cities.", sentenceMeaning: "O transporte público é essencial em grandes cidades.", otherWords: "transform, transfer, transparent" },
+            { prefix: "ex-", meaning: "Para fora, anterior, antigo", example: "export, ex-president", exampleMeaning: "exportar, ex-presidente", sentence: "Brazil exports coffee to many countries. The ex-president gave a speech.", sentenceMeaning: "O Brasil exporta café para muitos países. O ex-presidente fez um discurso.", otherWords: "extract, exclude, ex-boyfriend" },
+            { prefix: "pro-", meaning: "A favor de, para frente, em lugar de", example: "progress, proactive", exampleMeaning: "progresso, proativo", sentence: "We are making good progress on the project. She has a proactive approach to problems.", sentenceMeaning: "Estamos fazendo um bom progresso no projeto. Ela tem uma abordagem proativa para os problemas.", otherWords: "promote, pronoun, provide" },
+            { prefix: "auto-", meaning: "Próprio, por si mesmo", example: "autograph, automatic", exampleMeaning: "autógrafo, automático", sentence: "She got the singer's autograph. The doors are automatic.", sentenceMeaning: "Ela conseguiu o autógrafo do cantor. As portas são automáticas.", otherWords: "autobiography, autopilot, automobile" }
+        ];
+
+        const suffixData = [
+            { suffix: "-able/-ible", meaning: "Capaz de ser, que pode ser (forma adjetivos)", example: "readable, accessible", exampleMeaning: "legível, acessível", sentence: "The handwriting is barely readable. The building is accessible to wheelchairs.", sentenceMeaning: "A caligrafia é mal legível. O prédio é acessível a cadeiras de rodas.", otherWords: "enjoyable, comfortable, visible, flexible" },
+            { suffix: "-ation/-tion", meaning: "Ação, processo, resultado (forma substantivos)", example: "education, information", exampleMeaning: "educação, informação", sentence: "Education is key for a better future. We need more information.", sentenceMeaning: "A educação é a chave para um futuro melhor. Precisamos de mais informação.", otherWords: "creation, solution, communication, organization" },
+            { suffix: "-ful", meaning: "Cheio de, com (forma adjetivos)", example: "beautiful", exampleMeaning: "bonito/a", sentence: "The sunset was truly beautiful.", sentenceMeaning: "O pôr do sol foi realmente bonito.", otherWords: "helpful, careful, peaceful, successful" },
+            { suffix: "-less", meaning: "Sem, desprovido de (forma adjetivos)", example: "careless", exampleMeaning: "descuidado/a", sentence: "He made a careless mistake on the test.", sentenceMeaning: "Ele cometeu um erro descuidado na prova.", otherWords: "hopeless, fearless, homeless, endless" },
+            { suffix: "-ment", meaning: "Ação, estado, resultado (forma substantivos)", example: "development", exampleMeaning: "desenvolvimento", sentence: "The city is undergoing rapid development.", sentenceMeaning: "A cidade está passando por um rápido desenvolvimento.", otherWords: "agreement, movement, enjoyment, achievement" },
+            { suffix: "-ness", meaning: "Qualidade, estado de ser (forma substantivos)", example: "happiness", exampleMeaning: "felicidade", sentence: "True happiness comes from within.", sentenceMeaning: "A verdadeira felicidade vem de dentro.", otherWords: "kindness, darkness, sadness, weakness" },
+            { suffix: "-ly", meaning: "De modo, como (forma advérbios)", example: "quickly", exampleMeaning: "rapidamente", sentence: "She learned English very quickly.", sentenceMeaning: "Ela aprendeu inglês muito rapidamente.", otherWords: "slowly, happily, easily, carefully" },
+            { suffix: "-er/-or", meaning: "Aquele que faz, agente (forma substantivos)", example: "teacher, actor", exampleMeaning: "professor/a, ator/atriz", sentence: "My English teacher is very patient. He is a famous actor.", sentenceMeaning: "Meu professor de inglês é muito paciente. Ele é um ator famoso.", otherWords: "writer, singer, doctor, inventor" },
+            { suffix: "-ist", meaning: "Pessoa que pratica, especialista (forma substantivos)", example: "environmentalist", exampleMeaning: "ambientalista", sentence: "She is a passionate environmentalist.", sentenceMeaning: "Ela é uma ambientalista apaixonada.", otherWords: "artist, scientist, tourist, journalist" },
+            { suffix: "-ity", meaning: "Qualidade, estado (forma substantivos)", example: "creativity", exampleMeaning: "criatividade", sentence: "Creativity is essential for innovation.", sentenceMeaning: "Criatividade é essencial para a inovação.", otherWords: "ability, diversity, flexibility, responsibility" },
+            { suffix: "-ship", meaning: "Estado, condição, habilidade (forma substantivos)", example: "friendship", exampleMeaning: "amizade", sentence: "Their friendship has lasted for many years.", sentenceMeaning: "A amizade deles durou muitos anos.", otherWords: "leadership, relationship, citizenship, scholarship" },
+            { suffix: "-ing", meaning: "Ação contínua (particípio presente/gerúndio)", example: "reading", exampleMeaning: "lendo/leitura", sentence: "I enjoy reading books in my free time.", sentenceMeaning: "Eu gosto de ler livros no meu tempo livre.", otherWords: "running, learning, swimming" },
+            { suffix: "-ed", meaning: "Ação passada (particípio passado)", example: "finished", exampleMeaning: "terminado/a", sentence: "I have finished my homework.", sentenceMeaning: "Eu terminei minha lição de casa.", otherWords: "played, walked, decided, developed" },
+            { suffix: "-s/-es", meaning: "Plural (para substantivos)", example: "books, classes", exampleMeaning: "livros, aulas", sentence: "I have many books on my shelf. Our school has many different classes.", sentenceMeaning: "Eu tenho muitos livros na minha estante. Nossa escola tem muitas aulas diferentes.", otherWords: "cars, houses, cities, boxes" },
+            { suffix: "-ism", meaning: "Doutrina, sistema, prática, condição (forma substantivos)", example: "capitalism, tourism", exampleMeaning: "capitalismo, turismo", sentence: "Capitalism is an economic system. Tourism is important for the local economy.", sentenceMeaning: "O capitalismo é um sistema econômico. O turismo é importante para a economia local.", otherWords: "socialism, criticism, heroism, optimism" },
+            { suffix: "-ify/-fy", meaning: "Tornar, fazer (forma verbos)", example: "simplify, beautify", exampleMeaning: "simplificar, embelezar", sentence: "Can you simplify the instructions? She tried to beautify the room.", sentenceMeaning: "Você pode simplificar as instruções? Ela tentou embelezar o quarto.", otherWords: "classify, identify, purify, terrify" },
+            { suffix: "-ize/-ise", meaning: "Tornar, transformar em (forma verbos)", example: "organize, modernize", exampleMeaning: "organizar, modernizar", sentence: "We need to organize the event. They plan to modernize the factory.", sentenceMeaning: "Precisamos organizar o evento. Eles planejam modernizar a fábrica.", otherWords: "realize, criticize, specialize, apologize" },
+            { suffix: "-al", meaning: "Relativo a, característica de (forma adjetivos ou substantivos)", example: "national, arrival", exampleMeaning: "nacional, chegada", sentence: "This is a national holiday. The arrival of the train was delayed.", sentenceMeaning: "Este é um feriado nacional. A chegada do trem foi adiada.", otherWords: "musical, historical, personal, proposal, survival" },
+            { suffix: "-ive", meaning: "Tendência a, natureza de (forma adjetivos)", example: "active, creative", exampleMeaning: "ativo, criativo", sentence: "He is a very active person. She has a creative mind.", sentenceMeaning: "Ele é uma pessoa muito ativa. Ela tem uma mente criativa.", otherWords: "attractive, effective, sensitive, expensive" },
+            { suffix: "-ous/-ious/-eous", meaning: "Cheio de, caracterizado por (forma adjetivos)", example: "dangerous, famous, courageous", exampleMeaning: "perigoso, famoso, corajoso", sentence: "That road is very dangerous. He is a famous singer. The firefighter was courageous.", sentenceMeaning: "Aquela estrada é muito perigosa. Ele é um cantor famoso. O bombeiro foi corajoso.", otherWords: "mysterious, nervous, spacious, delicious, gorgeous" }
+        ];
+
+        const quizDataModule1 = [
+            {
+                question: "What is the main function of prefixes in word formation?",
+                options: [
+                    { text: "To modify the meaning of the base word.", correct: true },
+                    { text: "To change the part of speech of the base word.", correct: false },
+                    { text: "To reverse the meaning of the base word.", correct: false },
+                    { text: "To indicate the tense of the base word.", correct: false }
+                ],
+                explanation: "Prefixos modificam o significado da palavra-base, como 'un-' que muda um significado positivo para negativo, ou 'dis-' que indica reversão."
+            },
+            {
+                question: "Which of the following prefixes typically indicates an excessive or beyond amount?",
+                options: [
+                    { text: "Over-", correct: true },
+                    { text: "Dis-", correct: false },
+                    { text: "Pre-", correct: false },
+                    { text: "Under-", correct: false }
+                ],
+                explanation: "O prefixo 'over-' é explicitamente associado a 'excessivo' ou 'além' em seu significado."
+            },
+             {
+                type: "fill",
+                question: "The new law aims to make AI and programming ___________ (OBLIGE) subjects in high school.",
+                baseWord: "OBLIGE",
+                correctAnswer: "obligatory",
+                explanation: "A frase exige um adjetivo. Adicionar o sufixo '-atory' a 'oblige' (verbo) forma o adjetivo 'obligatory' (obrigatório/a)."
+            },
+            {
+                type: "fill",
+                question: "Understanding ___________ (CYBERSECURITY) is crucial to protect digital information.",
+                baseWord: "CYBERSECURITY",
+                correctAnswer: "cybersecurity",
+                explanation: "A frase requer um substantivo. 'Cybersecurity' (cibersegurança) é a forma substantiva correta."
+            }
+        ];
+
+        const quizDataModule2 = [
+            {
+                question: "The article highlights the need for a more ___________ (SUSTAIN) food model.",
+                options: [
+                    { text: "sustain", correct: false },
+                    { text: "sustainably", correct: false },
+                    { text: "sustainable", correct: true },
+                    { text: "sustainability", correct: false }
+                ],
+                explanation: "A frase requer um adjetivo para modificar 'food model'. Adicionar o sufixo '-able' a 'sustain' (verbo) forma o adjetivo 'sustainable' (sustentável)."
+            },
+            {
+                question: "Polluted air causes millions of deaths annually from ___________ (RESPIRATION) diseases.",
+                 options: [
+                    { text: "respiration", correct: false },
+                    { text: "respiratory", correct: true },
+                    { text: "respirate", correct: false },
+                    { text: "respirating", correct: false }
+                ],
+                explanation: "A frase requer um adjetivo para descrever 'diseases'. Adicionar o sufixo '-ory' a 'respiration' (substantivo) forma o adjetivo 'respiratory' (respiratório/a)."
+            },
+            {
+                type: "fill",
+                question: "Climate change leads to more frequent and ___________ (EXTREME) weather events.",
+                baseWord: "EXTREME",
+                correctAnswer: "extreme",
+                explanation: "A frase exige um adjetivo. 'Extreme' (extremo/a) já é a forma adjetiva correta."
+            },
+            {
+                type: "fill",
+                question: "The UN advocates for the ___________ (ELIMINATE) of waste discharges.",
+                baseWord: "ELIMINATE",
+                correctAnswer: "elimination",
+                explanation: "A frase requer um substantivo. O substantivo correspondente a 'eliminate' (verbo) é 'elimination' (eliminação)."
+            }
+        ];
+
+        function populateTable(tableBodyId, data, type) {
+            const tableBody = document.getElementById(tableBodyId);
+            tableBody.innerHTML = ''; // Limpa a tabela antes de popular novamente
+            data.forEach(item => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td>${item[type]}</td>
+                    <td>${item.meaning}</td>
+                    <td><em>${item.example}</em></td>
+                    <td>${item.exampleMeaning}</td>
+                    <td>${item.sentence}</td>
+                    <td>${item.sentenceMeaning}</td>
+                    <td>${item.otherWords}</td>
+                `;
+            });
+        }
+
+        function setupDetailedExplanation() {
+            const vocabSection = document.getElementById('vocabulario');
+            const oldDetailedExplanation = vocabSection.querySelector('.detailed-explanation-container');
+            if (oldDetailedExplanation) {
+                oldDetailedExplanation.remove();
+            }
+
+            const detailedExplanationContainer = document.createElement('div');
+            detailedExplanationContainer.classList.add('detailed-explanation-container');
+            detailedExplanationContainer.innerHTML = `
+                <div class="mt-8 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="text-xl font-semibold text-teal-600 mb-3">Entendendo a Fundo: Explicação Detalhada de Prefixos e Sufixos</h3>
+                    <p class="mb-4">Para desvendar o significado das palavras em inglês e expandir seu vocabulário, é crucial entender a "engenharia" por trás delas. Prefixos e sufixos são como peças de Lego que se encaixam nas palavras-raiz, mudando seu sentido ou sua função na frase. Vamos explorar cada um deles com mais detalhes, buscando a lógica por trás de seus significados.</p>
+
+                    <h4 class="text-lg font-medium text-stone-700 mt-4 mb-2">Prefixos: A Essência Antes da Raiz</h4>
+                    <p class="mb-3">Os prefixos são pequenas adições que vêm no <strong>início</strong> de uma palavra, funcionando como um 'modificador' de sentido. Eles podem indicar negação, repetição, posição, e muito mais.</p>
+                    <ul class="list-disc list-inside text-stone-600 space-y-2 mb-4">
+                        <li><strong>un-</strong>: Significa "não", "o oposto de" ou "reverter". Pense como um "desfazer" ou "inverter" algo. Ex: \`unhappy\` (infeliz).</li>
+                        <li><strong>re-</strong>: Significa "novamente" ou "de novo". Indica repetição de uma ação. Ex: \`redo\` (refazer).</li>
+                        <li><strong>dis-</strong>: Significa "o oposto de", "remoção" ou "separação". Traz a ideia de "desligar" ou "não aprovar". Ex: \`dislike\` (não gostar).</li>
+                        <li><strong>pre-</strong>: Significa "antes" ou "anterior". Indica que algo ocorre antes de outro evento. Ex: \`preview\` (prévia).</li>
+                        <li><strong>over-</strong>: Significa "excesso" ou "acima". Indica uma quantidade ou grau maior do que o esperado. Ex: \`overwhelm\` (sobrecarregar).</li>
+                        <li><strong>under-</strong>: Significa "abaixo" ou "insuficiência". Ex: \`underestimate\` (subestimar). No caso de \`understand\` (entender), a ideia é de "estar por baixo" para captar o significado profundo, ou "estar entre" as informações.</li>
+                        <li><strong>in-/im-/il-/ir-</strong>: Significam "não", "o oposto de". Variações para facilitar a pronúncia. Ex: \`inactive\`, \`impossible\`, \`illegal\`, \`irregular\`.</li>
+                        <li><strong>mis-</strong>: Significa "errado", "incorreto". Indica que algo foi feito de forma equivocada. Ex: \`misunderstand\` (entender errado).</li>
+                        <li><strong>non-</strong>: Significa "não". Uma negação simples. Ex: \`non-profit\` (sem fins lucrativos).</li>
+                        <li><strong>anti-</strong>: Significa "contra". Indica oposição. Ex: \`antibiotic\` (antibiótico).</li>
+                        <li><strong>co-</strong>: Significa "com", "junto". Sugere colaboração. Ex: \`cooperate\` (cooperar).</li>
+                        <li><strong>sub-</strong>: Significa "abaixo", "menor". Indica posição inferior. Ex: \`subway\` (metrô).</li>
+                        <li><strong>inter-</strong>: Significa "entre", "mútuo". Indica relação entre entidades. Ex: \`international\` (internacional).</li>
+                        <li><strong>trans-</strong>: Significa "através", "além". Sugere movimento ou mudança. Ex: \`transport\` (transporte).</li>
+                        <li><strong>ex-</strong>: Significa "para fora", "anterior", "antigo". Ex: \`export\` (exportar), \`ex-president\` (ex-presidente).</li>
+                        <li><strong>pro-</strong>: Significa "a favor de", "para frente", "em lugar de". Ex: \`progress\` (progresso), \`proactive\` (proativo).</li>
+                        <li><strong>auto-</strong>: Significa "próprio", "por si mesmo". Ex: \`autograph\` (autógrafo), \`automatic\` (automático).</li>
+                    </ul>
+
+                    <h4 class="text-lg font-medium text-stone-700 mt-4 mb-2">Sufixos: A Função e a Natureza da Palavra</h4>
+                    <p class="mb-3">Sufixos vêm no **final** da palavra, podendo mudar sua classe gramatical ou adicionar características.</p>
+                    <ul class="list-disc list-inside text-stone-600 space-y-2 mb-4">
+                        <li><strong>-able/-ible</strong>: "Capaz de ser", "que pode ser" (adjetivos). Ex: \`readable\` (legível), \`accessible\` (acessível).</li>
+                        <li><strong>-ation/-tion</strong>: "Ação", "processo", "resultado" (substantivos). Ex: \`education\` (educação), \`information\` (informação).</li>
+                        <li><strong>-ful</strong>: "Cheio de", "com" (adjetivos). Ex: \`beautiful\` (bonito/a).</li>
+                        <li><strong>-less</strong>: "Sem", "desprovido de" (adjetivos). Ex: \`careless\` (descuidado/a).</li>
+                        <li><strong>-ment</strong>: "Ação", "estado", "resultado" (substantivos). Ex: \`development\` (desenvolvimento).</li>
+                        <li><strong>-ness</strong>: "Qualidade", "estado de ser" (substantivos). Ex: \`happiness\` (felicidade).</li>
+                        <li><strong>-ly</strong>: "De modo", "como" (advérbios). Ex: \`quickly\` (rapidamente).</li>
+                        <li><strong>-er/-or</strong>: "Aquele que faz", "agente" (substantivos). Ex: \`teacher\` (professor/a), \`actor\` (ator/atriz).</li>
+                        <li><strong>-ist</strong>: "Pessoa que pratica", "especialista" (substantivos). Ex: \`environmentalist\` (ambientalista).</li>
+                        <li><strong>-ity</strong>: "Qualidade", "estado" (substantivos). Ex: \`creativity\` (criatividade).</li>
+                        <li><strong>-ship</strong>: "Estado", "condição", "habilidade" (substantivos). Ex: \`friendship\` (amizade).</li>
+                        <li><strong>-ing</strong>: "Ação contínua" (particípio presente/gerúndio). Ex: \`reading\` (lendo/leitura).</li>
+                        <li><strong>-ed</strong>: "Ação passada" (particípio passado). Ex: \`finished\` (terminado/a).</li>
+                        <li><strong>-s/-es</strong>: "Plural" (para substantivos). Ex: \`books\` (livros), \`classes\` (aulas).</li>
+                        <li><strong>-ism</strong>: "Doutrina, sistema, prática, condição" (substantivos). Ex: \`capitalism\` (capitalismo), \`tourism\` (turismo).</li>
+                        <li><strong>-ify/-fy</strong>: "Tornar", "fazer" (verbos). Ex: \`simplify\` (simplificar), \`beautify\` (embelezar).</li>
+                        <li><strong>-ize/-ise</strong>: "Tornar", "transformar em" (verbos). Ex: \`organize\` (organizar), \`modernize\` (modernizar).</li>
+                        <li><strong>-al</strong>: "Relativo a", "característica de" (adjetivos ou substantivos). Ex: \`national\` (nacional), \`arrival\` (chegada).</li>
+                        <li><strong>-ive</strong>: "Tendência a", "natureza de" (adjetivos). Ex: \`active\` (ativo), \`creative\` (criativo).</li>
+                        <li><strong>-ous/-ious/-eous</strong>: "Cheio de", "caracterizado por" (adjetivos). Ex: \`dangerous\` (perigoso), \`famous\` (famoso), \`courageous\` (corajoso).</li>
+                    </ul>
+                </div>
+            `;
+            vocabSection.appendChild(detailedExplanationContainer);
+        }
+        
+        function setupWordHighlight(highlightedWords, popup) {
+            highlightedWords.forEach(word => {
+                word.addEventListener('mouseenter', (event) => {
+                    const analysis = JSON.parse(word.dataset.analysis);
+                    let popupContent = `<strong>Palavra:</strong> ${word.textContent}<br>`;
+                    if (analysis.root) popupContent += `<strong>Raiz:</strong> ${analysis.root}<br>`;
+                    if (analysis.affixes && analysis.affixes.length > 0) {
+                        popupContent += `<strong>Afixos:</strong><ul>`;
+                        analysis.affixes.forEach(affix => {
+                            popupContent += `<li>${affix}</li>`;
+                        });
+                        popupContent += `</ul>`;
+                    }
+                    popup.innerHTML = popupContent;
+                    
+                    const rect = word.getBoundingClientRect();
+                    popup.style.left = `${window.scrollX + rect.left}px`;
+                    popup.style.top = `${window.scrollY + rect.bottom + 5}px`; // 5px below the word
+                    popup.style.display = 'block';
+                });
+                word.addEventListener('mouseleave', () => {
+                    popup.style.display = 'none';
+                });
+            });
+        }
+        
+        function renderQuiz(quizContainerId, questionsData) {
+            const quizContainer = document.getElementById(quizContainerId);
+            quizContainer.innerHTML = ''; // Limpa o quiz antes de renderizar novamente
+            questionsData.forEach((q, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.classList.add('mb-6', 'p-4', 'border', 'border-stone-200', 'rounded-lg', 'bg-amber-50');
+                
+                const questionText = document.createElement('p');
+                questionText.classList.add('font-medium', 'mb-2', 'text-stone-700');
+                questionText.textContent = `${index + 1}. ${q.question}`;
+                questionDiv.appendChild(questionText);
+
+                if (q.type === 'fill') {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.classList.add('border', 'border-stone-300', 'rounded-md', 'p-2', 'w-full', 'sm:w-1/2', 'focus:ring-teal-500', 'focus:border-teal-500');
+                    input.dataset.baseWord = q.baseWord;
+                    questionDiv.appendChild(input);
+                } else {
+                    q.options.forEach(opt => {
+                        const label = document.createElement('label');
+                        label.classList.add('block', 'mb-1', 'text-stone-600', 'hover:bg-amber-100', 'p-2', 'rounded-md');
+                        const radio = document.createElement('input');
+                        radio.type = 'radio';
+                        radio.name = `q${quizContainerId}-${index}`;
+                        radio.value = opt.text;
+                        if (opt.correct) radio.dataset.correct = "true";
+                        label.appendChild(radio);
+                        label.append(` ${opt.text}`);
+                        questionDiv.appendChild(label);
+                    });
+                }
+                
+                const feedbackDiv = document.createElement('div');
+                feedbackDiv.classList.add('mt-2', 'p-2', 'rounded-md', 'text-sm');
+                feedbackDiv.style.display = 'none';
+                questionDiv.appendChild(feedbackDiv);
+
+                const checkButton = document.createElement('button');
+                checkButton.textContent = 'Verificar Resposta';
+                checkButton.classList.add('mt-2', 'bg-teal-600', 'text-white', 'py-1', 'px-3', 'rounded-md', 'hover:bg-teal-700', 'text-sm');
+                checkButton.addEventListener('click', () => {
+                    feedbackDiv.style.display = 'block';
+                    let isCorrect = false;
+                    if (q.type === 'fill') {
+                        const userAnswer = questionDiv.querySelector('input[type="text"]').value.trim().toLowerCase();
+                        isCorrect = userAnswer === q.correctAnswer.toLowerCase();
+                    } else {
+                        const selectedOption = questionDiv.querySelector(`input[name="q${quizContainerId}-${index}"]:checked`);
+                        if (selectedOption) {
+                            isCorrect = selectedOption.dataset.correct === "true";
+                        }
+                    }
+
+                    if (isCorrect) {
+                        feedbackDiv.textContent = `Correto! ${q.explanation}`;
+                        feedbackDiv.classList.remove('bg-red-100', 'text-red-700');
+                        feedbackDiv.classList.add('bg-green-100', 'text-green-700');
+                    } else {
+                        feedbackDiv.textContent = `Incorreto. ${q.explanation}`;
+                        feedbackDiv.classList.remove('bg-green-100', 'text-green-700');
+                        feedbackDiv.classList.add('bg-red-100', 'text-red-700');
+                    }
+                });
+                questionDiv.appendChild(checkButton);
+                quizContainer.appendChild(questionDiv);
+            });
+        }
+        
+        function renderPollutionChart() {
+            const ctx = document.getElementById('pollutionChart');
+            if (!ctx) return; // Sai se o elemento canvas não existir
+
+            // Função para criar um gradiente
+            function createGradient(chartCtx, chartArea, color1, color2) {
+                const gradient = chartCtx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                gradient.addColorStop(0, color1);
+                gradient.addColorStop(1, color2);
+                return gradient;
+            }
+
+            let chartInstance = Chart.getChart("pollutionChart"); // Tenta obter o gráfico existente
+            if (chartInstance) {
+                chartInstance.destroy(); // Destrói o gráfico existente antes de recriar
+            }
+
+            chartInstance = new Chart(ctx, { // Cria uma nova instância do gráfico
+                type: 'bar',
+                data: {
+                    labels: ['Mortes por Ar Poluído (Anual)', 'Mortes por Água Contaminada (Anual)'],
+                    datasets: [{
+                        label: 'Número de Mortes (em milhões)',
+                        data: [7, 5], // Data from the report
+                        backgroundColor: function(context) {
+                            const chart = context.chart;
+                            const {ctx: chartDrawingContext, chartArea} = chart;
+                            if (!chartArea) {
+                                return; // A área do gráfico pode não estar disponível na primeira renderização
+                            }
+                            return createGradient(chartDrawingContext, chartArea, 
+                                context.dataIndex === 0 ? 'rgba(217, 119, 6, 0.8)' : 'rgba(13, 148, 136, 0.8)', 
+                                context.dataIndex === 0 ? 'rgba(245, 158, 11, 0.5)' : 'rgba(20, 184, 166, 0.5)'  
+                            );
+                        },
+                        borderColor: [
+                            'rgba(217, 119, 6, 1)',
+                            'rgba(13, 148, 136, 1)'
+                        ],
+                        borderWidth: 1,
+                        borderRadius: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeInOutQuad'
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Mortes (em milhões)',
+                                color: '#4B5563',
+                                font: { size: 14, weight: 'bold' }
+                            },
+                            ticks: { color: '#6B7280' },
+                            grid: { color: '#E5E7EB' }
+                        },
+                        x: {
+                            ticks: { color: '#4B5563', font: { size: 12 }},
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Impacto da Poluição na Saúde (Estimativa Anual - OMS)',
+                            color: '#0D9488',
+                            font: { size: 18, weight: 'bold' },
+                            padding: { top: 10, bottom: 20 }
+                        },
+                        tooltip: {
+                            backgroundColor: '#111827', titleColor: '#F9FAFB', bodyColor: '#D1D5DB',
+                            borderColor: '#0D9488', borderWidth: 1, borderRadius: 6, padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) { label += context.parsed.y + ' milhões'; }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function callGeminiAPI(prompt, outputDiv, loadingDiv) {
+            outputDiv.style.display = 'none';
+            outputDiv.innerHTML = '';
+            loadingDiv.style.display = 'inline-block';
+
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+            const payload = { contents: chatHistory };
+            const apiKey = ""; 
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    outputDiv.innerHTML = text.replace(/\n/g, '<br>');
+                    outputDiv.style.display = 'block';
+                } else {
+                    console.error("Resposta inesperada da API Gemini:", result);
+                    outputDiv.innerHTML = '<p class="text-red-600">Erro ao gerar conteúdo: resposta inesperada da API. Tente novamente.</p>';
+                    outputDiv.style.display = 'block';
+                }
+            } catch (error) {
+                console.error("Erro ao chamar a API Gemini:", error);
+                outputDiv.innerHTML = '<p class="text-red-600">Ocorreu um erro na comunicação com a API. Verifique sua conexão ou tente novamente mais tarde.</p>';
+                outputDiv.style.display = 'block';
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        // Configuração dos event listeners e chamadas iniciais
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                contentSections.forEach(section => section.classList.remove('active'));
+                document.getElementById(button.dataset.tab).classList.add('active');
+            });
+        });
+        
+        populateTable('prefixTableBody', prefixData, 'prefix');
+        populateTable('suffixTableBody', suffixData, 'suffix');
+        setupDetailedExplanation();
+
+        const highlightedWordsModule1 = document.querySelectorAll('#newsTextModule1 .highlight-word');
+        const popupModule1 = document.getElementById('wordPopup');
+        setupWordHighlight(highlightedWordsModule1, popupModule1);
+        
+        const highlightedWordsModule2 = document.querySelectorAll('#newsTextModule2 .highlight-word');
+        const popupModule2 = document.getElementById('wordPopupModule2');
+        setupWordHighlight(highlightedWordsModule2, popupModule2);
+
+        document.getElementById('generateMorePrefixWords').addEventListener('click', () => {
+            const prompt = `Gere 5 palavras em inglês que utilizem prefixos comuns. Para cada palavra, forneça seu significado em português e uma frase de exemplo em inglês. Formate como uma lista numerada.`;
+            callGeminiAPI(prompt, document.getElementById('generatedPrefixWordsContent'), document.getElementById('prefixLoading'));
+            document.getElementById('generatedPrefixWords').style.display = 'block';
+        });
+
+        document.getElementById('generateMoreSuffixWords').addEventListener('click', () => {
+            const prompt = `Gere 5 palavras em inglês que utilizem sufixos comuns. Para cada palavra, forneça seu significado em português e uma frase de exemplo em inglês. Formate como uma lista numerada.`;
+            callGeminiAPI(prompt, document.getElementById('generatedSuffixWordsContent'), document.getElementById('suffixLoading'));
+            document.getElementById('generatedSuffixWords').style.display = 'block';
+        });
+
+        document.getElementById('summarizeModule1News').addEventListener('click', () => {
+            const newsText = document.getElementById('newsTextModule1').textContent;
+            const prompt = `Resuma o seguinte artigo de notícias em inglês para o português, focando nos pontos principais e nas informações-chave. Mantenha o resumo conciso (entre 100-150 palavras):\n\n${newsText}`;
+            callGeminiAPI(prompt, document.getElementById('summaryModule1Content'), document.getElementById('summaryModule1Loading'));
+            document.getElementById('summaryModule1').style.display = 'block';
+        });
+
+        document.getElementById('summarizeModule2News').addEventListener('click', () => {
+            const newsText = document.getElementById('newsTextModule2').textContent;
+            const prompt = `Resuma o seguinte artigo de notícias em inglês para o português, focando nos pontos principais e nas informações-chave. Mantenha o resumo conciso (entre 100-150 palavras):\n\n${newsText}`;
+            callGeminiAPI(prompt, document.getElementById('summaryModule2Content'), document.getElementById('summaryModule2Loading'));
+            document.getElementById('summaryModule2').style.display = 'block';
+        });
+
+        // Executar após o carregamento completo da página
+        window.onload = function() {
+            renderQuiz('quizModule1', quizDataModule1);
+            renderQuiz('quizModule2', quizDataModule2);
+            renderPollutionChart(); // Renderiza o gráfico
+            window.addEventListener('resize', renderPollutionChart); // Adiciona listener para redimensionar
+        };
+
+    </script>
+</body>
+</html>
